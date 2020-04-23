@@ -14,6 +14,11 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.Arrays;
+//import static java.util.stream.Collectors.toCollection;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import org.paukov.combinatorics3.Generator;
 
 /**
  *
@@ -21,8 +26,8 @@ import java.util.TreeMap;
  */
 public class Dhpalgorithm {
     
-    private static final int S = 5;
-    private static final int LARGE = 5;
+    private static final int S = 2;
+    private static final int LARGE = 1;
     
     public Dhpalgorithm(){    
         ArrayList<String> listD = new ArrayList<>();
@@ -53,7 +58,9 @@ public class Dhpalgorithm {
         for(String val : cSet){
             for(String compVal : cSet){
                 if(!val.equals(compVal)){
+                    if (h2.get(val+compVal) == null && h2.get(compVal+val) == null){
                     h2.put(val+compVal,0);
+                    }
                 }
             }  
         }
@@ -70,12 +77,15 @@ public class Dhpalgorithm {
                 // If elements already exists in hash map 
                     hmap.put(val, ++c); 
                 }
-              
+                // count of 2-subsets
                 for(String valComp : elements){
                     if(!val.equals(valComp)){
-                        int countH2 = h2.get(val+valComp);
-                        h2.replace(val+valComp,++countH2);
+                        if(h2.get(val+valComp)!=null){
+                            int countH2 = h2.get(val+valComp);
+                            h2.replace(val+valComp,++countH2);
+                        }
                     }
+                        
                 }
             }
         }
@@ -96,7 +106,7 @@ public class Dhpalgorithm {
         
         /* Part 2*/
         int k = 2;
-        List<ArrayList<String>> c = new ArrayList<ArrayList<String>>();
+        List<List<List<String>>> c = new ArrayList<List<List<String>>>();
         List<ArrayList<String>> d = new ArrayList<ArrayList<String>>();
         List<HashMap<String, Integer>> h = new ArrayList<HashMap<String, Integer>>();
         c.add(new ArrayList<>());
@@ -112,14 +122,13 @@ public class Dhpalgorithm {
         h.add(k,h2);
         
         
-        c.add(k,genCandidate(l.get(k-1),h.get(k),c.get(k)));
+        c.add(k,genCandidate(l.get(k-1),h.get(k),k));
         //set all the buckets of H k+1 to zero
         h.add(new HashMap<>());
         d.add(new ArrayList<>());
         //System.out.println(d.get(k));
         for(String t : d.get(k)){
-            countSupport(t,c.get(k),k);
-            
+            ArrayList<String> tcup = countSupport(t,c.get(k),k);
         }
     }
 
@@ -131,8 +140,47 @@ public class Dhpalgorithm {
         Dhpalgorithm dhp = new Dhpalgorithm();
     }
     
-    public ArrayList<String> genCandidate(ArrayList<String> l, HashMap<String, Integer> h, ArrayList<String> c){
-        c = new ArrayList<>();
+    public void validateKComb(List<String> subset, List<List<String>> arr, HashMap<String, Integer> h, int k){
+        //System.out.println(subset);
+        int count = 0;
+        String key = "";
+        for(int i =0; i<subset.size(); i++){
+            key += subset.get(i);
+        }
+        //System.out.println(key + " soporte: ");
+        //System.out.println(h.get(key));
+        if(h.get(key) != null && h.get(key) >= S){
+            //System.out.println("Key añadida!");
+            arr.add(subset);
+        }
+        
+    }
+    
+    /**
+     * @param l array with large itemsets (L_k-1)
+     * @param h hashmap H_k  
+     * @param c array of candidates to generate
+     * @param k magnitude of combinations
+     */
+    public List<List<String>> genCandidate(ArrayList<String> l, HashMap<String, Integer> h, int k){
+        //for all combinations of l1 where k-2 = 0
+        //System.out.println(h);
+        //System.out.println(l);
+        List<List<String>> arr = new ArrayList<List<String>>();
+        /*
+        List<List<String>> list = Generator
+        .combination(l)
+        .simple(k)
+        .stream()
+        .collect(Collectors.<List<String>>toList());
+        */
+        //System.out.println(list);
+        Generator.combination(l)
+       .simple(k)
+       .stream()
+       .forEach(comb -> validateKComb(comb,arr,h,k)
+       );
+        /*
         for(int i = 0; i<l.size(); i++){
             for(int j = 0; j<l.size(); j++){
                 if(h.get(l.get(i)+l.get(j)) != null){
@@ -142,43 +190,74 @@ public class Dhpalgorithm {
                 }
             }
         }
-        //System.out.println(c);
-        return c;
+        */
+        //System.out.println(arr);
+        return arr;
     }
     
     /**
      * @param t transaction of DB
-     * @param c array with candidates
+     * @param c array with candidates, must be array of strings
      * @return t' 
      */
-    public ArrayList<String> countSupport(String t, ArrayList<String> c, int k){
+    public ArrayList<String> countSupport(String t, List<List<String>> c, int k){
         ArrayList<String> tprime = new ArrayList<>();
+        //System.out.println("Candidates: ");
         //System.out.println(c);
         String[] elements = t.split(",");
-        System.out.println(elements.length);
-        int [] a = new int[k];
-        for(String candidate : c){
-            int cCount = 0;
-            //HashMap<String, Integer> h2 = new HashMap<>();
-            for(String transaction : elements){
-                System.out.println("transaction: "+transaction);
-                System.out.println("candidate: "+candidate);
-                if (transaction.contains(candidate)){
-                    System.out.println("transaction contained in candidate.");
-                    cCount ++;
-                    for(int j=1; j<=k; j++){
-                        a[j]++;
+        //System.out.println(elements);
+        
+        //int [] a = new int[k];
+        HashMap<List<String>, Integer> candArrCount = new HashMap<>();
+        HashMap<String, Integer> cCount = new HashMap<>();
+        
+        //for(int i=0; i<elements.length; i++){
+        //for(String transaction : elements){ 
+        
+        for(List<String> candidateArr : c){
+            //System.out.println("transaction: "+transaction);
+            //System.out.println("candidate: "+candidateArr);
+            boolean [] isSubset = new boolean[candidateArr.size()];
+            //for(String candidate : candidateArr){
+            for(int i =0; i<candidateArr.size();i++){
+                for(String transaction : elements){ 
+                    if (transaction.equals(candidateArr.get(i))){
+                        isSubset[i] = true;
+                        break;
+                    }
+                }
+                //bool false
+            }
+            boolean isSubsetArr = true;
+            for(int i=0; i<isSubset.length; i++){
+                if(!isSubset[i]){
+                    isSubsetArr = false;
+                    break;
+                }
+            }
+            if(isSubsetArr){
+                System.out.println("candidate is subset of transaction.");
+                if (candArrCount.get(candidateArr) == null){
+                    candArrCount.put(candidateArr,1);
+                }else {
+                    int count = candArrCount.get(candidateArr);
+                    candArrCount.put(candidateArr, ++count); 
+                }
+                for(String candidate : candidateArr){
+                    if (cCount.get(candidate) == null){
+                        cCount.put(candidate,1);
+                    }else {
+                        int count = cCount.get(candidate);
+                        cCount.put(candidate, ++count); 
                     }
                 }
             }
         }
-        for(int i=0,j=0;i<elements.length; i++){
-            tprime.add("");
-            if(a[i] >= k){
-                tprime.add(j,elements[i]);
-                j++;
+        for(String transaction : elements){
+            if(cCount.get(transaction)!=null && cCount.get(transaction) >= k){
+                tprime.add(transaction);
             }
-        }
+        }        
         System.out.println(tprime);
         return tprime;
     }
