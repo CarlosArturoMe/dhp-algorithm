@@ -13,7 +13,6 @@ def return_items_with_min_support_p1(item_set, transaction_list, min_support, fr
     _item_set = set()
     local_set = defaultdict(int)
     h2_set = defaultdict(int)
-    
 
     for item in item_set:
         for transaction in transaction_list:
@@ -22,18 +21,22 @@ def return_items_with_min_support_p1(item_set, transaction_list, min_support, fr
                 local_set[item] += 1
             trans_set = set()
             for transaction_comp in transaction:
-                trans_set.add(frozenset(transaction_comp))
+                #print(transaction_comp)
+                trans_set.add(frozenset((transaction_comp,)))
             #print("transaction: ",trans_set)
             two_subsets = join_set(trans_set, 2)
+            #print("two_subsets: ",two_subsets)
             for element in two_subsets:
+                #print("element to h2_set: ",element)
                 h2_set[element] += 1
 
     for item, count in local_set.items():
-            support = float(count)/len(transaction_list)
-            #print(support)
-            if support >= min_support:
-                    _item_set.add(item)
-
+        support = float(count)/len(transaction_list)
+        #print(support)
+        if support >= min_support:
+                _item_set.add(item)
+    #print("_item_set: ",_item_set)
+    #print("h2_set: ",h2_set)
     return _item_set, h2_set
 
 def return_items_with_min_support(item_set, transaction_list, min_support, freq_set):
@@ -62,11 +65,13 @@ def join_set(item_set, length):
 
 def gen_candidate(l_set, h_set, k, min_support,transaction_list):
     candidates_with_support = set()
+    #print("l_set: ",l_set)
     candidates = set([i.union(j) for i in l_set for j in l_set if len(i.intersection(j)) == k-2])
-    print("candidates: ",candidates)
+    #print("candidates: ",candidates)
     for c in candidates:
         #print("c: ",c)
-        #print(h_set[c])
+        #if h_set[c] > 0:
+            #print(h_set[c])
         support = float(h_set[c])/len(transaction_list)
         if support >= min_support:
             candidates_with_support.add(c)
@@ -101,15 +106,15 @@ def run_AprioriDHP(data_iter, min_support, min_confidence,large):
     hash_set = dict()
     one_c_set, two_h_set = return_items_with_min_support_p1(item_set,transaction_list,min_support,freq_set)
     #print("one_c_set: ",one_c_set)
-    print("two_h_Set: ",two_h_set)
+    #print("two_h_Set: ",two_h_set)
     current_l_set = one_c_set
     k = 2
     current_h_set = two_h_set.copy()
     hash_set[k] = two_h_set.copy()
     #while(get_h_min_support_len(hash_set[k],min_support,transaction_list) >= large):
-    print("current_h_set: ",current_h_set)
+    #print("current_h_set: ",current_h_set)
     current_c_set = gen_candidate(current_l_set, current_h_set ,k, min_support,transaction_list) # gen_candidate
-    print(current_c_set)
+    print("current_c_set: ",current_c_set)
     while(current_l_set != set([])):
         large_set[k-1] = current_l_set
         current_l_set = join_set(current_l_set, k) # new candidates
