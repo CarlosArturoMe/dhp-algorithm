@@ -82,6 +82,7 @@ def get_h_min_support_len(hash_set,min_support,transaction_list):
         support = float(count)/len(transaction_list)
         if support >= min_support:
             support_count+=1
+    print(support_count)
     return support_count
 
 def get_item_set_transaction_list(data_iterator):
@@ -152,37 +153,53 @@ def run_AprioriDHP(data_iter, min_support, min_confidence,large):
     one_c_set, two_h_set = return_items_with_min_support_p1(item_set,transaction_list,min_support,freq_set)
     #print("one_c_set: ",one_c_set)
     #print("two_h_Set: ",two_h_set)
-    current_l_set = one_c_set
+    current_l_set = one_c_set.copy()
     k = 2
+    large_set[k-1] = one_c_set.copy()
     database_li[k] = transaction_list.copy() 
-    current_h_set = two_h_set.copy()
+    #current_h_set = two_h_set.copy()
     hash_set[k] = two_h_set.copy()
-    #while(get_h_min_support_len(hash_set[k],min_support,transaction_list) >= large):
     #print("current_h_set: ",current_h_set)
-    current_c_set = gen_candidate(current_l_set, current_h_set ,k, min_support,transaction_list) # gen_candidate
-    print("current_c_set: ",current_c_set)
-    database_li[k+1] = list()
-    for transaction in database_li[k]:
-        t_hat, candidates_count = count_support(transaction, current_c_set, k)
-        if len(t_hat) > k:
-            hash_set[k+1],t_umlaut  = make_hasht(t_hat, k, hash_set[k], transaction_list, min_support)
-            if len(t_umlaut) > k:
-                database_li[k+1].append(t_umlaut) #d_{k+1} = d_{k+1} u t_umlaut
-    large_set[k] = set()
-    for index in candidates_count:
-        support = float(candidates_count[index])/len(transaction_list)
-        if support >= min_support:
-            large_set[k].append(index)
-    k+=1
-    #end while
-    while(current_l_set != set([])):
-        large_set[k-1] = current_l_set
+    while(get_h_min_support_len(hash_set[k],min_support,transaction_list) >= large):
+        current_c_set = gen_candidate(large_set[k-1], hash_set[k] ,k, min_support,transaction_list) # gen_candidate
+        #print("current_c_set: ",current_c_set)
+        database_li[k+1] = list()
+        for transaction in database_li[k]:
+            t_hat, candidates_count = count_support(transaction, current_c_set, k)
+            if len(t_hat) > k:
+                hash_set[k+1],t_umlaut  = make_hasht(t_hat, k, hash_set[k], transaction_list, min_support)
+                if len(t_umlaut) > k:
+                    database_li[k+1].append(t_umlaut) #d_{k+1} = d_{k+1} u t_umlaut
+        large_set[k] = set()
+        for index in candidates_count:
+            support = float(candidates_count[index])/len(transaction_list)
+            if support >= min_support:
+                large_set[k].append(index)
+        k+=1
+    #part3
+    current_c_set = gen_candidate(large_set[k-1], hash_set[k] ,k, min_support,transaction_list)
+    while(current_c_set != set([])):
+        #large_set[k-1] = current_l_set
+        database_li[k+1] = list()
+        for transaction in database_li[k]:
+            t_hat, candidates_count = count_support(transaction, current_c_set, k)
+            if len(t_hat) > k:
+                hash_set[k+1],t_umlaut  = make_hasht(t_hat, k, hash_set[k], transaction_list, min_support)
+                if len(t_umlaut) > k:
+                    database_li[k+1].append(t_umlaut) #d_{k+1} = d_{k+1} u t_umlaut
+        large_set[k] = set()
+        for index in candidates_count:
+            support = float(candidates_count[index])/len(transaction_list)
+            if support >= min_support:
+                large_set[k].append(index)
+        if len(database_li[k+1]) == 0:
+            break
+        #current_c_set = gen_candidate(large_set[k-1], hash_set[k] ,k, min_support,transaction_list)
         current_l_set = join_set(current_l_set, k) # new candidates
-        currentCSet = return_items_with_min_support(current_l_set,
+        current_c_set = return_items_with_min_support(current_l_set,
                                                 transaction_list,
                                                 min_support,
                                                 freq_set)
-        current_l_set = currentCSet
         k = k + 1
 
     def get_support(item):
