@@ -60,13 +60,25 @@ def join_set(item_set, length):
     #print(item_set)
     return set([i.union(j) for i in item_set for j in item_set if len(i.union(j)) == length])
 
-def get_h_min_support_len(hash_set,min_support){
+def gen_candidate(l_set, h_set, k, min_support,transaction_list):
+    candidates_with_support = set()
+    candidates = set([i.union(j) for i in l_set for j in l_set if len(i.intersection(j)) == k-2])
+    print("candidates: ",candidates)
+    for c in candidates:
+        #print("c: ",c)
+        #print(h_set[c])
+        support = float(h_set[c])/len(transaction_list)
+        if support >= min_support:
+            candidates_with_support.add(c)
+    return candidates_with_support
+
+def get_h_min_support_len(hash_set,min_support,transaction_list):
     support_count = 0
     for item, count in hash_set.items():
-        if count >= min_support:
-            count 
-}
-
+        support = float(count)/len(transaction_list)
+        if support >= min_support:
+            support_count+=1
+    return support_count
 
 def get_item_set_transaction_list(data_iterator):
     transaction_list = list()
@@ -82,20 +94,22 @@ def get_item_set_transaction_list(data_iterator):
     return item_set, transaction_list
 
 
-def run_AprioriDHP(data_iter, min_support, min_confidence):
+def run_AprioriDHP(data_iter, min_support, min_confidence,large):
     item_set, transaction_list = get_item_set_transaction_list(data_iter)
     freq_set = defaultdict(int)
     large_set = dict()
     hash_set = dict()
     one_c_set, two_h_set = return_items_with_min_support_p1(item_set,transaction_list,min_support,freq_set)
-    #print("one_c_set: ")
-    #print(one_c_set)
+    #print("one_c_set: ",one_c_set)
+    print("two_h_Set: ",two_h_set)
     current_l_set = one_c_set
     k = 2
-    hash_set[k] = two_h_set
-
-    
-
+    current_h_set = two_h_set.copy()
+    hash_set[k] = two_h_set.copy()
+    #while(get_h_min_support_len(hash_set[k],min_support,transaction_list) >= large):
+    print("current_h_set: ",current_h_set)
+    current_c_set = gen_candidate(current_l_set, current_h_set ,k, min_support,transaction_list) # gen_candidate
+    print(current_c_set)
     while(current_l_set != set([])):
         large_set[k-1] = current_l_set
         current_l_set = join_set(current_l_set, k) # new candidates
@@ -185,6 +199,7 @@ if __name__ == "__main__":
     min_support = options.minS
     min_confidence = options.minC
     start_time = time.time()
-    items, rules = run_AprioriDHP(in_file, min_support, min_confidence)
+    large = 2
+    items, rules = run_AprioriDHP(in_file, min_support, min_confidence, large)
     #print ("Time to Execute apriori is : %s seconds " % (time.time() - start_time))
     print_results(items, rules)
