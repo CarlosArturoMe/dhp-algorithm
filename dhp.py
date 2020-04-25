@@ -82,7 +82,7 @@ def get_h_min_support_len(hash_set,min_support,transaction_list):
         support = float(count)/len(transaction_list)
         if support >= min_support:
             support_count+=1
-    print(support_count)
+    #print(support_count)
     return support_count
 
 def get_item_set_transaction_list(data_iterator):
@@ -98,14 +98,13 @@ def get_item_set_transaction_list(data_iterator):
     #print(transaction_list)
     return item_set, transaction_list
 
-def count_support(transaction, current_c_set, k ):
+def count_support(transaction, current_c_set, k, candidates_count):
     transaction_set = list()
-    candidates_count = defaultdict(int)
-    #candidate_count = defaultdict(int)
+    #candidates_count = defaultdict(int)
     a_tcount = defaultdict(int)
     #for i in range(len(transaction)):
     #    a_tcount.append(0)
-    print(current_c_set)
+    #print(current_c_set)
     for c in current_c_set:
         if c.issubset(transaction):
             candidates_count[c] += 1
@@ -116,10 +115,10 @@ def count_support(transaction, current_c_set, k ):
         #print(a_tcount[i])
         if a_tcount[t] >= k:
             transaction_set.append(t)
-    return transaction_set, candidates_count
+    return transaction_set
 
-def make_hasht(transaction, index_k, hash_set_k,transaction_list,min_support):
-    hash_set_k1 = defaultdict(int)
+def make_hasht(transaction, index_k, hash_set_k,transaction_list,min_support,hash_set_k1):
+    #hash_set_k1 = defaultdict(int)
     local_item_count = defaultdict(int)
     transaction_umlaut = list()
     trans_set= set()
@@ -127,22 +126,27 @@ def make_hasht(transaction, index_k, hash_set_k,transaction_list,min_support):
         trans_set.add(frozenset((t,)))
     #transaction_subsets = combinations(trans_set, index_k+1)
     transaction_subsets = map(frozenset, [x for x in combinations(trans_set, index_k+1)])
+    #transaction_subsets = [x for x in combinations(trans_set, index_k+1)]
     all_subsets = True
-    for subset in transaction_subsets:
-        sub_subsets = join_set(subset, index_k)
-        for subset in sub_subsets:
-            support = float(hash_set_k[subset])/len(transaction_list)
-            if support < min_support: ##support(subset) >= min_sup 
+    for subset_k1 in transaction_subsets:
+        sub_subsets = join_set(subset_k1, index_k)
+        k1 = set()
+        for fr_set in subset_k1:
+            k1 = k1.union(fr_set)
+        k1 = frozenset(k1)
+        for subset_k in sub_subsets:
+            support = float(hash_set_k[subset_k])/len(transaction_list)
+            if support < min_support: ##support(subset_k) >= min_sup 
                 all_subsets = False
         if all_subsets:
-            hash_set_k1[subset] += 1 ##hash_set_k1[subset] += 1
-            for item in subset: 
+            hash_set_k1[k1] += 1 ##hash_set_k1[k1] += 1
+            for item in k1: 
                 local_item_count[item] += 1 ##add item to local_item_count or add 1
     for item in transaction:
         if local_item_count[item] > 0: ##if local count > 0, add to transaction_umlaut 
             transaction_umlaut.append(item)
-    print(hash_set_k1)
-    return hash_set_k1, transaction_umlaut
+    #print(hash_set_k1)
+    return transaction_umlaut
 
 def run_AprioriDHP(data_iter, min_support, min_confidence,large):
     item_set, transaction_list = get_item_set_transaction_list(data_iter)
@@ -164,34 +168,38 @@ def run_AprioriDHP(data_iter, min_support, min_confidence,large):
         current_c_set = gen_candidate(large_set[k-1], hash_set[k] ,k, min_support,transaction_list) # gen_candidate
         #print("current_c_set: ",current_c_set)
         database_li[k+1] = list()
+        candidates_count = defaultdict(int)
+        hash_set[k+1] = defaultdict(int)
         for transaction in database_li[k]:
-            t_hat, candidates_count = count_support(transaction, current_c_set, k)
+            t_hat= count_support(transaction, current_c_set, k, candidates_count)
             if len(t_hat) > k:
-                hash_set[k+1],t_umlaut  = make_hasht(t_hat, k, hash_set[k], transaction_list, min_support)
+                t_umlaut  = make_hasht(t_hat, k, hash_set[k], transaction_list, min_support,hash_set[k+1])
                 if len(t_umlaut) > k:
                     database_li[k+1].append(t_umlaut) #d_{k+1} = d_{k+1} u t_umlaut
         large_set[k] = set()
         for index in candidates_count:
             support = float(candidates_count[index])/len(transaction_list)
             if support >= min_support:
-                large_set[k].append(index)
+                large_set[k].add(index)
         k+=1
     #part3
     current_c_set = gen_candidate(large_set[k-1], hash_set[k] ,k, min_support,transaction_list)
     while(current_c_set != set([])):
         #large_set[k-1] = current_l_set
         database_li[k+1] = list()
+        candidates_count = defaultdict(int)
+        hash_set[k+1] = defaultdict(int)
         for transaction in database_li[k]:
-            t_hat, candidates_count = count_support(transaction, current_c_set, k)
+            t_hat = count_support(transaction, current_c_set, k, candidates_count)
             if len(t_hat) > k:
-                hash_set[k+1],t_umlaut  = make_hasht(t_hat, k, hash_set[k], transaction_list, min_support)
+                t_umlaut  = make_hasht(t_hat, k, hash_set[k], transaction_list, min_support, hash_set[k+1])
                 if len(t_umlaut) > k:
                     database_li[k+1].append(t_umlaut) #d_{k+1} = d_{k+1} u t_umlaut
         large_set[k] = set()
         for index in candidates_count:
             support = float(candidates_count[index])/len(transaction_list)
             if support >= min_support:
-                large_set[k].append(index)
+                large_set[k].add(index)
         if len(database_li[k+1]) == 0:
             break
         #current_c_set = gen_candidate(large_set[k-1], hash_set[k] ,k, min_support,transaction_list)
@@ -201,7 +209,9 @@ def run_AprioriDHP(data_iter, min_support, min_confidence,large):
                                                 min_support,
                                                 freq_set)
         k = k + 1
-
+    
+    return large_set
+    """
     def get_support(item):
         return float(freq_set[item])/len(transaction_list)
 
@@ -215,6 +225,8 @@ def run_AprioriDHP(data_iter, min_support, min_confidence,large):
     #print("large_set.items(): ")
     #print(list(large_set.items())[1:])
     #for key, value in large_set.items()[1:]:
+"""
+"""
     for key, value in list(large_set.items())[1:]:
         for item in value:
             _subsets = map(frozenset, [x for x in subsets(item)])
@@ -228,7 +240,7 @@ def run_AprioriDHP(data_iter, min_support, min_confidence,large):
                         to_ret_rules.append(((tuple(element), tuple(remain)),
                                            confidence))
     return to_ret_items, to_ret_rules
-
+"""
 
 def print_results(items, rules):
     #for item, support in sorted(items, key=lambda (item, support): support):
@@ -282,6 +294,8 @@ if __name__ == "__main__":
     min_confidence = options.minC
     start_time = time.time()
     large = 2
-    items, rules = run_AprioriDHP(in_file, min_support, min_confidence, large)
+    #items, rules = run_AprioriDHP(in_file, min_support, min_confidence, large)
     #print ("Time to Execute apriori is : %s seconds " % (time.time() - start_time))
-    print_results(items, rules)
+    #print_results(items, rules)
+    large_set = run_AprioriDHP(in_file, min_support, min_confidence, large)
+    print(large_set)
